@@ -1,9 +1,82 @@
 import numpy as np
 import pyvisgraph as vg
 import datetime
+from collections import OrderedDict
+
+def construction_unbiased_tree(tree, n_max, max_time=200):
+    """
+    construction of the
+    :param tree: unbiased tree
+    :param n_max: maximum number of iterations
+    :return: found path
+    """
+    # trivial suffix path, the initial state can transition to itself
+    if tree.segment == 'suffix' and tree.check_transition_b(tree.init[1], tree.unbiased_tree.nodes[tree.init]['label'],
+                                                            tree.init[1]):
+        tree.goals.add(tree.init)
+        if tree.buchi.buchi_graph.edges[(tree.init[1], tree.init[1])]['truth'] == '1':
+            return {0: [0, []]}
+        else:
+            return {0: [0, [tree.init]]}
+    s = datetime.datetime.now()
+    flag = False
+    num_of_iter = 0
+    first_path_length = 0
+    first_time = 0
+    paths = OrderedDict()
+    for n in range(n_max):
+        if (datetime.datetime.now() - s).total_seconds() > max_time:  # or n > 2000:
+            print('overtime')
+            return 0, n, tree.unbiased_tree.number_of_nodes(), 100000, (datetime.datetime.now() - s).total_seconds()
+
+        x_new = tree.sample()
+        q_p_closest = tree.nearest(x_new)
+        if not x_new:
+            continue
+
+        ap = tree.get_label(x_new)
+        ap = ap + '_' + str(1) if ap != '' else ap
+        label = ap
+
+        # near state
+        if tree.lite:
+            # avoid near
+            near_nodes = [q_p_closest]
+        else:
+            near_nodes = tree.near(x_new)
+            near_nodes = near_nodes + [q_p_closest] if q_p_closest not in near_nodes else near_nodes
+        # check the line is obstacle-free
+        obs_check = tree.obstacle_check(near_nodes, x_new, label)
+
+        for b_state in tree.buchi.buchi_graph.nodes:
+            # new product state
+            q_new = (x_new, b_state)
+            # extend
+            added = tree.extend(q_new, near_nodes, label, obs_check)
+            # rewire
+            if not tree.lite and added:
+                tree.rewire(q_new, near_nodes, obs_check)
+
+        # detect the first accepting state
+        if len(tree.goals) > 0 and tree.segment == 'prefix' and not flag:
+            flag = True
+            paths = tree.find_path(tree.goals)
+            print("unbiased RRT finds first goal after {} iterations:".format(n))
+            num_of_iter = n
+            print("the path length is {}".format(paths[0][0]))
+            first_path_length = paths[0][0]
+            first_time = (datetime.datetime.now() - s).total_seconds()
+            break
+        if len(tree.goals) > 0 and tree.segment == 'suffix':
+            print('find first path after {} iterations'.format(n), end=' ')
+            break
+    if len(tree.goals) == 0:
+        print("unbiased RRT fails to find a path after {} iterations:".format(n_max))
+        return 0, n_max, tree.unbiased_tree.number_of_nodes(), 100000, (datetime.datetime.now() - s).total_seconds()
+    return paths, num_of_iter, tree.unbiased_tree.number_of_nodes(), first_path_length, first_time
 
 
-def construction_heuristic_tree(tree, n_max):
+def construction_heuristic_tree(tree, n_max, max_time=200):
     """
     construction of the heuristic tree
     :param tree: heuristic-tree
@@ -23,8 +96,11 @@ def construction_heuristic_tree(tree, n_max):
     num_of_iter = 0
     first_path_length = 0
     first_time = 0
+    paths = OrderedDict()
     for n in range(n_max):
-        if (datetime.datetime.now() - s).total_seconds() > 2000:  # or n > 2000:
+        # if n % 50 == 0:
+        #     print('iteration:', n)
+        if (datetime.datetime.now() - s).total_seconds() > max_time:  # or n > 2000:
             print('overtime')
             return 0, n, tree.heuristic_tree.number_of_nodes(), 100000, (datetime.datetime.now() - s).total_seconds()
 
@@ -57,8 +133,8 @@ def construction_heuristic_tree(tree, n_max):
         # detect the first accepting state
         if len(tree.goals) > 0 and tree.segment == 'prefix' and flag == False:
             flag = True
-            paths = tree.find_path(tree.goals)
             print("heuristic RRT finds first goal after {} iterations:".format(n))
+            paths = tree.find_path(tree.goals)
             num_of_iter = n
             print("the path length is {}".format(paths[0][0]))
             first_path_length = paths[0][0]
@@ -67,7 +143,76 @@ def construction_heuristic_tree(tree, n_max):
         if len(tree.goals) > 0 and tree.segment == 'suffix':
             print('find first path after {} iterations'.format(n), end=' ')
             break
-    return tree.find_path(tree.goals), num_of_iter, tree.heuristic_tree.number_of_nodes(), first_path_length, first_time
+    return paths, num_of_iter, tree.heuristic_tree.number_of_nodes(), first_path_length, first_time
+
+
+def construction_neural_tree(tree, n_max, max_time=200):
+    """
+    construction of the neural tree
+    :param tree: neural tree
+    :param n_max: maximum number of iterations
+    :return: found path
+    """
+    # trivial suffix path, the initial state can transition to itself
+    if tree.segment == 'suffix' and tree.check_transition_b(tree.init[1], tree.neural_tree.nodes[tree.init]['label'],
+                                                            tree.init[1]):
+        tree.goals.add(tree.init)
+        if tree.buchi.buchi_graph.edges[(tree.init[1], tree.init[1])]['truth'] == '1':
+            return {0: [0, []]}
+        else:
+            return {0: [0, [tree.init]]}
+    s = datetime.datetime.now()
+    flag = False
+    num_of_iter = 0
+    first_path_length = 0
+    first_time = 0
+    paths = OrderedDict()
+    for n in range(n_max):
+        if (datetime.datetime.now() - s).total_seconds() > max_time:  # or n > 2000:
+            print('overtime')
+            return 0, n, tree.neural_tree.number_of_nodes(), 100000, (datetime.datetime.now() - s).total_seconds()
+
+        x_new, q_p_closest = tree.biased_sample()
+        if not x_new:
+            continue
+
+        ap = tree.get_label(x_new)
+        ap = ap + '_' + str(1) if ap != '' else ap
+        label = ap
+
+        # near state
+        if tree.lite:
+            # avoid near
+            near_nodes = [q_p_closest]
+        else:
+            near_nodes = tree.near(x_new)
+            near_nodes = near_nodes + [q_p_closest] if q_p_closest not in near_nodes else near_nodes
+        # check the line is obstacle-free
+        obs_check = tree.obstacle_check(near_nodes, x_new, label)
+
+        for b_state in tree.buchi.buchi_graph.nodes:
+            # new product state
+            q_new = (x_new, b_state)
+            # extend
+            added = tree.extend(q_new, near_nodes, label, obs_check)
+            # rewire
+            if not tree.lite and added:
+                tree.rewire(q_new, near_nodes, obs_check)
+
+        # detect the first accepting state
+        if len(tree.goals) > 0 and tree.segment == 'prefix' and flag == False:
+            flag = True
+            paths = tree.find_path(tree.goals)
+            print("neural RRT finds first goal after {} iterations:".format(n))
+            num_of_iter = n
+            print("the path length is {}".format(paths[0][0]))
+            first_path_length = paths[0][0]
+            first_time = (datetime.datetime.now() - s).total_seconds()
+            break
+        if len(tree.goals) > 0 and tree.segment == 'suffix':
+            print('find first path after {} iterations'.format(n), end=' ')
+            break
+    return paths, num_of_iter, tree.neural_tree.number_of_nodes(), first_path_length, first_time
 
 
 def path_via_visibility(tree, path):

@@ -52,7 +52,7 @@ class HeuristicTree:
         self.step_size = para['step_size']
         self.segment = segment
         self.lite = para['is_lite']
-        self.dim = 2  # 2D workspace by default
+        self.dim = 2
 
         # Size of the ball used in function near
         uni_v = np.power(np.pi, self.robot * self.dim / 2) / math.gamma(self.robot * self.dim / 2 + 1)
@@ -65,9 +65,6 @@ class HeuristicTree:
         # Selecting final buchi states
         self.b_final = self.buchi.buchi_graph.graph['accept'][0] if self.segment == 'prefix' else \
             self.buchi.buchi_graph.graph['accept']
-
-        # Threshold for collision avoidance
-        self.threshold = para['threshold']
 
         self.min_dis = np.inf
         self.q_min2final = []
@@ -82,7 +79,8 @@ class HeuristicTree:
         # Construct visibility graph for obstacle avoidance checks
         polys = [[vg.Point(x[0], x[1]) for x in poly.exterior.coords[:-1]] for poly in self.obstacles]
         self.g = vg.VisGraph()
-        self.g.build(polys, status=False)
+        if polys:
+            self.g.build(polys, status=False)
 
     def trunc(self, i, value):
         if value < 0:
@@ -278,7 +276,6 @@ class HeuristicTree:
         :param: x_rand randomly sampled point form: single point ()
         :param: x_nearest nearest point in the tree form: single point ()
         :return: new point single point ()
-        由于是网格地图，需要将坐标转化为int类型
         """
         if np.linalg.norm(np.subtract(x_rand, x_nearest), ord=self.ord) <= self.step_size:
             return x_rand
@@ -375,7 +372,6 @@ class HeuristicTree:
         :param x_new: new position component
         :param label: label of x_new
         :return: a dictionary indicating whether the line connecting two points are obstacle-free
-        移除了对多机器人的枚举
         """
 
         obs_check = {}
@@ -412,7 +408,7 @@ class HeuristicTree:
 
     def get_label(self, x):
         """
-        返回连续空间中点x对应的label
+        get the label of the position x in the continuous workspace
         """
         point = Point(x)
         for label, region in self.regions.items():
@@ -477,9 +473,14 @@ class HeuristicTree:
             goal = goals[i]
             path = [goal]
             s = goal
+            counter = 0
             while s != self.init:
                 s = list(self.heuristic_tree.pred[s].keys())[0]
                 path.insert(0, s)
+                counter += 1
+                if counter > 5000:
+                    print('Dead loop')
+                    break
             if self.segment == 'prefix':
                 paths[i] = [self.heuristic_tree.nodes[goal]['cost'], path]
             elif self.segment == 'suffix':

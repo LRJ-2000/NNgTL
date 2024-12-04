@@ -1,0 +1,5 @@
+.idea/
+data/
+model/
+scripts/__pycache__/
+utils/__pycache__/
