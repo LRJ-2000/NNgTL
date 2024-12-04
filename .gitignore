@@ -3,3 +3,4 @@ data/
 model/
 scripts/__pycache__/
 utils/__pycache__/
+./train_test_split.pkl
