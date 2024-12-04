@@ -1,0 +1,15 @@
+beautifulsoup4==4.11.2
+matplotlib==3.6.3
+networkx==3.0
+numpy==1.23.5
+pyvisgraph==0.2.1
+Requests==2.32.3
+scikit_learn==1.2.1
+scipy==1.10.1
+Shapely==2.0.6
+sympy==1.11.1
+termcolor==2.5.0
+torch==1.13.1
+torch_geometric==2.2.0
+torchvision==0.14.1
+torchviz==0.0.2

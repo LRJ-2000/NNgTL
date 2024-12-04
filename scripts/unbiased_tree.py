@@ -60,9 +60,6 @@ class UnbiasedTree:
         self.b_final = self.buchi.buchi_graph.graph['accept'][0] if self.segment == 'prefix' else \
             self.buchi.buchi_graph.graph['accept']
 
-        # Threshold for collision avoidance
-        self.threshold = para['threshold']
-
         # Probability of selecting q_p_closest
         self.p_closest = para['p_closest']
 

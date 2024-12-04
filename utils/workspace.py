@@ -100,13 +100,15 @@ class Workspace:
         self.CMAP = colors.ListedColormap(
             ['white', 'green', 'pink', 'blue', 'gray', 'gray', 'gray', 'gray', 'gray', 'red', 'black'])
 
-    def discrete_to_continuous(self, x):
+    def discrete_to_continuous(self, discrete_coords):
         """Convert discrete coordinates to continuous."""
-        return ((x[0] + 0.5) / self.N, (x[1] + 0.5) / self.M)
+        return ((discrete_coords[0] + 0.5) / self.N, (discrete_coords[1] + 0.5) / self.M)
 
-    def continuous_to_discrete(self, x):
+    def continuous_to_discrete(self, continuous_coords):
         """Convert continuous coordinates to discrete."""
-        return (int(x[0] * self.N), int(x[1] * self.M))
+        x_c = min(max(continuous_coords[0], 0), 1 - 1e-8)
+        y_c = min(max(continuous_coords[1], 0), 1 - 1e-8)
+        return (int(x_c * self.N), int(y_c * self.M))
 
     def sample_in_region(self, x):
         """Sample a point in the region corresponding to the discrete coordinate x."""
@@ -134,7 +136,7 @@ class Workspace:
                     if point.within(label_region):
                         self.workspace[i][j] = label_id
 
-    def generate_random_map(self, num_of_label=7, ratio_of_obstacle=0.2, type_of_obstacle=1):
+    def generate_random_map(self, num_of_label=7, ratio_of_obstacle=0.1, type_of_obstacle=3, type_of_label=2):
         """Generate a random map with specified obstacle types."""
         self.workspace = [[EMPTY_CELL] * self.M for _ in range(self.N)]
 
@@ -158,71 +160,97 @@ class Workspace:
 
         # Type 2: Single rectangle obstacle
         elif type_of_obstacle == 2:
-            x = random.randint(0, self.N - 150)
-            y = random.randint(0, self.M - 60)
             length = random.randint(60, 150)
             width = random.randint(20, 60)
+            x = random.randint(0, self.N - length)
+            y = random.randint(0, self.M - width)
             for i in range(length):
                 for j in range(width):
                     self.workspace[x + i][y + j] = OBSTACLE_CELL
 
             top_left = self.discrete_to_continuous((x, y))
+            bottom_right = self.discrete_to_continuous((x + length, y + width))
             obs_now = Polygon([
-                (top_left[0] - 0.5 / self.N, top_left[1] - 0.5 / self.M),
-                (top_left[0] + (length - 0.5) / self.N, top_left[1] - 0.5 / self.M),
-                (top_left[0] + (length - 0.5) / self.N, top_left[1] + (width - 0.5) / self.M),
-                (top_left[0] - 0.5 / self.N, top_left[1] + (width - 0.5) / self.M)
+                (top_left[0], top_left[1]),
+                (bottom_right[0], top_left[1]),
+                (bottom_right[0], bottom_right[1]),
+                (top_left[0], bottom_right[1])
             ])
             self.obs.append(obs_now)
 
         # Type 3: Two rectangle obstacles (with potential overlap)
         elif type_of_obstacle == 3:
-            x1 = random.randint(0, self.N - 80)
-            y1 = random.randint(0, self.M - 40)
             length1 = random.randint(60, 80)
             width1 = random.randint(20, 40)
+            x1 = random.randint(0, self.N - length1)
+            y1 = random.randint(0, self.M - width1)
             for i in range(length1):
                 for j in range(width1):
                     self.workspace[x1 + i][y1 + j] = OBSTACLE_CELL
-
             top_left1 = self.discrete_to_continuous((x1, y1))
+            bottom_right1 = self.discrete_to_continuous((x1 + length1, y1 + width1))
             obs_now1 = Polygon([
-                (top_left1[0] - 0.5 / self.N, top_left1[1] - 0.5 / self.M),
-                (top_left1[0] + (length1 - 0.5) / self.N, top_left1[1] - 0.5 / self.M),
-                (top_left1[0] + (length1 - 0.5) / self.N, top_left1[1] + (width1 - 0.5) / self.M),
-                (top_left1[0] - 0.5 / self.N, top_left1[1] + (width1 - 0.5) / self.M)
+                (top_left1[0], top_left1[1]),
+                (bottom_right1[0], top_left1[1]),
+                (bottom_right1[0], bottom_right1[1]),
+                (top_left1[0], bottom_right1[1])
             ])
             self.obs.append(obs_now1)
 
-            x2 = random.randint(0, self.N - 40)
-            y2 = random.randint(0, self.M - 80)
             length2 = random.randint(20, 40)
             width2 = random.randint(60, 80)
+            x2 = random.randint(0, self.N - length2)
+            y2 = random.randint(0, self.M - width2)
             for i in range(length2):
                 for j in range(width2):
                     self.workspace[x2 + i][y2 + j] = OBSTACLE_CELL
-
             top_left2 = self.discrete_to_continuous((x2, y2))
+            bottom_right2 = self.discrete_to_continuous((x2 + length2, y2 + width2))
             obs_now2 = Polygon([
-                (top_left2[0] - 0.5 / self.N, top_left2[1] - 0.5 / self.M),
-                (top_left2[0] + (length2 - 0.5) / self.N, top_left2[1] - 0.5 / self.M),
-                (top_left2[0] + (length2 - 0.5) / self.N, top_left2[1] + (width2 - 0.5) / self.M),
-                (top_left2[0] - 0.5 / self.N, top_left2[1] + (width2 - 0.5) / self.M)
+                (top_left2[0], top_left2[1]),
+                (bottom_right2[0], top_left2[1]),
+                (bottom_right2[0], bottom_right2[1]),
+                (top_left2[0], bottom_right2[1])
             ])
             self.obs.append(obs_now2)
+            
 
         # Generating Labels
         for _ in range(num_of_label):
             while True:
-                x = random.randint(1, self.N - 2)
-                y = random.randint(1, self.M - 2)
-                if self.check_obs_around(x, y, 15):
-                    self.label_loc.append((x, y))
-                    center = self.discrete_to_continuous((x, y))
-                    label_region = generate_polygon_around_point(center)
-                    self.assign_discrete_label(x, y, 15, label_region, _ + 1)
-                    self.regions['l{}'.format(_ + 1)] = label_region
-                    break
+                # polygon around the center
+                if type_of_label == 1:
+                    x = random.randint(1, self.N - 2)
+                    y = random.randint(1, self.M - 2)
+                    if self.check_obs_around(x, y, 10):
+                        self.label_loc.append((x, y))
+                        center = self.discrete_to_continuous((x, y))
+                        label_region = generate_polygon_around_point(center, random_points_count=6, radius=5 / 200)
+                        self.assign_discrete_label(x, y, 10, label_region, _ + 1)
+                        self.regions['l{}'.format(_ + 1)] = label_region
+                        break
+                # square
+                if type_of_label == 2:
+                    x = random.randint(1, self.N - 2)
+                    y = random.randint(1, self.M - 2)
+                    if self.check_obs_around(x, y, 1):
+                        self.label_loc.append((x, y))
+                        center = self.discrete_to_continuous((x, y))
+                        half_size_x = 1.5 / self.N
+                        half_size_y = 1.5 / self.M
+                        label_region = Polygon([
+                            (max(0, center[0] - half_size_x), max(0, center[1] - half_size_y)),
+                            (max(0, center[0] - half_size_x), min(1, center[1] + half_size_y)),
+                            (min(1, center[0] + half_size_x), min(1, center[1] + half_size_y)),
+                            (min(1, center[0] + half_size_x), max(0, center[1] - half_size_y))
+                        ])
+                        for dx in range(-1, 2):
+                            for dy in range(-1, 2):
+                                self.workspace[x + dx][y + dy] = _ + 1
+                        self.regions['l{}'.format(_ + 1)] = label_region
+                        break
+
+
 
     def visualize_workspace(self, save_image_name="", cmap=None):
         """
@@ -232,9 +260,7 @@ class Workspace:
             save_image_name (str): Name of the image file to save the visualization. Defaults to an empty string.
             cmap (ListedColormap, optional): Color map for visualization. Defaults to a predefined colormap.
         """
-        if cmap is None:
-            cmap = colors.ListedColormap(
-                ['white', 'green', 'pink', 'blue', 'gray', 'gray', 'gray', 'gray', 'gray', 'red', 'black'])
+        if cmap is None: cmap = self.CMAP
 
         fig, ax = plt.subplots()
         plt.xticks([])
