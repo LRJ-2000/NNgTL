@@ -3,8 +3,6 @@ import matplotlib.pyplot as plt
 from matplotlib import colors
 import numpy as np
 from shapely.geometry import Polygon, Point
-from matplotlib.collections import PatchCollection
-from matplotlib.patches import Polygon as PolygonPatch
 from scipy.spatial import ConvexHull
 
 # Define constants
@@ -126,7 +124,7 @@ class Workspace:
                     return False
         return True
 
-    def assign_discrete_label(self, x, y, r, label_region, label):
+    def assign_discrete_label(self, x, y, r, label_region, label_id):
         """Assign labels to discrete workspace based on a continuous region."""
         for i in range(x - r, x + r + 1):
             for j in range(y - r, y + r + 1):
@@ -134,7 +132,7 @@ class Workspace:
                     point = self.discrete_to_continuous((i, j))
                     point = Point(point)
                     if point.within(label_region):
-                        self.workspace[i][j] = label
+                        self.workspace[i][j] = label_id
 
     def generate_random_map(self, num_of_label=7, ratio_of_obstacle=0.2, type_of_obstacle=1):
         """Generate a random map with specified obstacle types."""
