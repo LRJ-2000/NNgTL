@@ -290,7 +290,7 @@ def test_on_one_data(LTL=None, test_data_path='./data/testing_data', data_id=Non
             model1.load_state_dict(torch.load(model_path1))
             model1.eval()
 
-            model2 = BA_Predict(D.metadata(), n1)
+            model2 = BA_Predict(D.metadata())
             model2.load_state_dict(torch.load(model_path2))
             model2.eval()
 
@@ -361,7 +361,7 @@ def test_on_one_data(LTL=None, test_data_path='./data/testing_data', data_id=Non
         heuristic_results = run_tree_construction(HeuristicTree, construction_heuristic_tree, 'heuristic', para)
         if heuristic_results:
             num_of_iter1, num_of_nodes1, final_path_length1, time_1 = heuristic_results
-            results_dict['heuristic'] = {-
+            results_dict['heuristic'] = {
                 'num_of_iter': num_of_iter1,
                 'num_of_nodes': num_of_nodes1,
                 'final_path_length': final_path_length1,
