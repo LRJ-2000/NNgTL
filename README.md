@@ -1,2 +1,0 @@
-# NNgTL
-Implementation of NNgTL
